@@ -1,34 +1,57 @@
-"""Copy the entry image to the output directory.
+#!/usr/bin/env python3
+"""Salin gambar entri berita ke direktori keluaran make.fun.
 
-The entry is a pre-rendered PNG (entry.png, next to this file) that sums
-up the world news of Sunday 22 November 2026 as a newspaper front
-page: masthead, date band, a full-width hero lead with a headline in
-larger type, seven more photo stories with at most 12 words each, and
-a footer ticker. The hero is COP31 collapsing with no deal in Antalya;
-the other stories are the tanker attacks near the Strait of Hormuz, a
-Russian drone hitting a block of flats near Kyiv, BepiColombo reaching
-Mercury, Marc Marquez sealing his eighth MotoGP title, the Democrats
-taking 258 House seats, the FBI crime database breach, and a funeral
-boat sinking in Nigeria. This program only copies it to
-$MAKEFUN_OUTPUT_DIR/entry.png, so both runs write identical bytes.
-Standard library only; no network.
+Gambar yang disalin adalah koran satu halaman yang merangkum berita dunia
+pada Minggu, 22 November 2026: berita utama COP31 yang runtuh, tujuh blok
+foto berita lain, dan sebuah ticker di bagian bawah. Gambar itu sudah jadi
+sebelum program ini dijalankan; tugas program ini hanyalah memindahkannya
+ke tempat yang diminta make.fun, tanpa mengubah satu byte pun.
+
+Karena penyalinan dilakukan byte demi byte dan tidak ada waktu, angka acak,
+atau masukan lain yang ikut tertulis ke hasil, menjalankan program ini dua
+kali dengan sumber yang sama selalu menghasilkan file yang byte-nya
+identik. Itulah yang membuat hasil build dapat direproduksi.
 """
 
 import os
 import shutil
+import sys
+
+SOURCE_NAME = "entry.png"
 
 
-def main():
-    out_dir = os.environ["MAKEFUN_OUTPUT_DIR"]
-    src = os.path.join(os.path.dirname(os.path.abspath(__file__)),
-                       "entry.png")
-    dst = os.path.join(out_dir, "entry.png")
+def main() -> int:
+    here = os.path.dirname(os.path.abspath(__file__))
+    source = os.path.join(here, SOURCE_NAME)
+
+    out_dir = os.environ.get("MAKEFUN_OUTPUT_DIR")
+    if not out_dir:
+        print("error: MAKEFUN_OUTPUT_DIR is not set", file=sys.stderr)
+        return 1
+
+    if not os.path.isfile(source):
+        print(f"error: source image not found: {source}", file=sys.stderr)
+        return 1
+    if os.path.getsize(source) == 0:
+        print(f"error: source image is empty: {source}", file=sys.stderr)
+        return 1
+
     os.makedirs(out_dir, exist_ok=True)
-    shutil.copyfile(src, dst)
-    # Fail loudly on a partial copy instead of shipping a broken file.
-    if os.path.getsize(dst) != os.path.getsize(src):
-        raise RuntimeError("entry.png copy is incomplete")
+    target = os.path.join(out_dir, SOURCE_NAME)
+
+    shutil.copyfile(source, target)
+
+    if os.path.getsize(target) != os.path.getsize(source):
+        print(
+            f"error: copied file size {os.path.getsize(target)} does not "
+            f"match source size {os.path.getsize(source)}",
+            file=sys.stderr,
+        )
+        return 1
+
+    print(f"copied {source} -> {target}")
+    return 0
 
 
 if __name__ == "__main__":
-    main()
+    raise SystemExit(main())
